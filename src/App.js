@@ -26,18 +26,91 @@ const App = () => {
       <Router>
         <Header />
         <Routes>
-          <Route path="/newest" element={<StoryList type="newest" />} />
+          <Route path="/newest" element={<StoryList type="new" />} />
           <Route path="/best" element={<StoryList type="best" />} />
           <Route path="/top" element={<StoryList type="top" />} />
           <Route path="/ask" element={<StoryList type="ask" />} />
           <Route path="/show" element={<StoryList type="show" />} />
           <Route path="/job" element={<StoryList type="job" />} />
-          <Route path="/" element={<StoryList type="top" />} />
+          <Route path="/newcomments" element={<CommentList />} />
+          <Route path="/rehn" element={<StoryList type="top" />} />
         </Routes>
         <Footer />
       </Router>
     </div>
   )
+}
+
+const CommentList = () => {
+  const [comments, setComments] = useState([dummyStory])
+
+  const getMaxItemID = () => {
+    const request = axios.get(url + 'maxitem.json')
+    return request.then(response => response.data)
+  }
+  const getNewestStories = () => {
+    const request = axios.get(url + 'newstories.json')
+    return request.then(response => response.data)
+  }
+  const getItem = (itemID) => {
+    const request = axios.get(`${url}item/${itemID}.json`)
+    return request.then(response => response.data)
+  }
+
+  const fetchData = async () => {
+    const maxItemID = await getMaxItemID()
+    const newestStories = await getNewestStories()
+    let currentItemID = maxItemID
+    let comments = []
+    let commentsPerPage = 10
+    while (comments.length <= commentsPerPage) {
+      if (!(currentItemID in newestStories)) {
+        const currentItem = await getItem(currentItemID)
+        if (currentItem.type === 'comment') {
+          comments.push(currentItem)
+        }
+      }
+      currentItemID--
+    }
+    setComments(comments)
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const getParentStory = async (id) => {
+    const currentItem = await getItem(id)
+    console.log('cur item;', currentItem)
+    if (currentItem.type === 'story')
+      return currentItem
+    else
+      return getParentStory(currentItem.parent)
+  }
+
+  return (
+    <>
+      {comments.map(comment => (
+        <>
+        <div>{JSON.stringify(comment)}</div><div className="story-list">
+          <article className="story-list-item" key={comment.id}>
+            <h4><a href={`https://news.ycombinator.com/user?id=${comment.by}`}>{comment.by}</a> {timeAgo(comment.time)} ago | <a href={`https://news.ycombinator.com/item?id=${comment.parent}`}>parent</a> | <a href={`https://news.ycombinator.com/item?id=${getParentStory(comment.id).id}#${comment.id}`}>context</a> | next | on : Y</h4>
+            <p>{comment.text}</p>
+          </article>
+        </div>
+        </>
+      ))}
+    </>
+  )
+}
+
+const timeAgo = (unixTimestamp) => {
+  // TODO: fix
+  const msMinute = 60*1000
+  const timePosted = new Date(unixTimestamp * 1000)
+  const timeNow = new Date()
+  const timeDifference = timeNow - timePosted
+  return Math.floor(timeDifference / msMinute) + ' minutes'
 }
 
 const StoryList = ({type}) => {
@@ -68,12 +141,22 @@ const StoryList = ({type}) => {
     })
     }, [type])
 
+  const getWebsiteName = (url) => {
+    let a = document.createElement('a')
+    a.setAttribute('href', url)
+    let hostName = a.hostname
+    if (hostName.startsWith('www.'))
+      return hostName.substring(4)
+    else
+      return hostName
+  }
+
   return (
     <div className="story-list">
     {stories.map(story => (
       <article className="story-list-item" key={story.id}>
-        <h2><a href={story.url}>{story.title}</a></h2>
-        <p><em>{story.score}</em> points posted by <a href={`https://news.ycombinator.com/user?id=${story.by}`}>{story.by}</a> | {story.descendants} comments</p>
+        <h2><a href={`https://news.ycombinator.com/item?id=${story.id}`}>{story.title}</a></h2> <a href={`${story.url}`}>{getWebsiteName(story.url)}</a>
+        <p><em>{story.score}</em> points posted by <a href={`https://news.ycombinator.com/user?id=${story.by}`}>{story.by}</a> {timeAgo(story.time)} ago | <a href={`https://news.ycombinator.com/item?id=${story.id}`}>{story.descendants} comments</a></p>
       </article>
     ))}
   </div>
@@ -87,12 +170,12 @@ const Header = () => {
         <nav>
           <ul>
             <li><Link to="/">Hacker News</Link></li>
-            <li><Link to="/newest">new</Link></li>
+            <li><Link to="newest">new</Link></li>
             <li><a href="https://news.ycombinator.com/front">past</a></li>
-            <li><a href="https://news.ycombinator.com/newcomments">comments</a></li>
-            <li><Link to="/ask">ask</Link></li>
-            <li><Link to="/show">show</Link></li>
-            <li><Link to="/jobs">jobs</Link></li>
+            <li><a href="/newcomments">comments</a></li>
+            <li><Link to="ask">ask</Link></li>
+            <li><Link to="show">show</Link></li>
+            <li><Link to="jobs">jobs</Link></li>
             {/* <li><a href="https://news.ycombinator.com/submit">submit</a></li> */}
           </ul>
         </nav>
