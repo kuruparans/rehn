@@ -28,8 +28,8 @@ const App = () => {
       <BrowserRouter basename="/rehn">
         <Header />
         <Routes>
-          <Route path="/story/:id" element={<StoryItem />} />
-          <Route path="/user/:username" element={<Profile />} />
+          <Route path="/story/:id" element={<Story />} />
+          <Route path="/user/:username" element={<User />} />
           <Route path="/newest" element={<StoryList type="new" />} />
           <Route path="/best" element={<StoryList type="best" />} />
           <Route path="/top" element={<StoryList type="top" />} />
@@ -177,21 +177,64 @@ const StoryList = ({type}) => {
   )
 }
 
-const Profile = () => {
+const User = () => {
+  const dummyUser = {
+    "about" : "This is a test",
+    "created" : 1173923446,
+    "delay" : 0,
+    "id" : "jl",
+    "karma" : 0,
+    "submitted" : []
+  }  
+  const { username } = useParams()
+  const [user, setUser] = useState([dummyUser])
+  const [submissions, setSubmissions] = useState([dummyStory])
+
+  const getUser = () => {
+    const request = axios.get(`${url}/user/${username}.json`)
+    return request.then(response => response.data)
+  }
+
+  const fetchData = async () => {
+    const user = await getUser()
+    setUser(user)
+    const submissionPromises = user.submitted.map(submittedID => getItem(submittedID))
+    const submissions = await Promise.all(submissionPromises)
+    setSubmissions(submissions)
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
   return (
     <>
+      <h2>{user.id}</h2>
+      <p>EST: {Date(user.created * 1000)}</p>
+      <p>Karma: {user.karma}</p>
+      <h3>Submissions</h3>
+      {submissions?.filter(submission => submission.type === 'story').map(submission => (
+        <>
+          <StoryInfo storyID={submission.id} />
+        </>
+      ))}
+      <h3>Comments</h3>
+      {submissions?.filter(submission => submission.type === 'comment').map(comment => (
+        <>
+          <Comment comment={comment.id} nestLimit="2" />
+        </>
+      ))}
     </>
   )
 }
 
-const StoryItem = () => {
+const Story = () => {
   const [story, setStory] = useState([dummyStory])
   const { id } = useParams()
 
   const fetchData = async (storyID) => {
     const story = await getItem(storyID)
     setStory(story)
-    console.log('set story', story)
   }
 
   useEffect(() => {
@@ -200,8 +243,7 @@ const StoryItem = () => {
 
   return (
     <>
-      <h1>{story.title}</h1>
-      <p><em>{story.score}</em> points posted by <Link to={`/user/${story.by}`}>{story.by}</Link></p>
+      <StoryInfo storyID={story.id} />
 
       <div className="comment-list">
         {story.kids?.map(kid => (
@@ -216,11 +258,29 @@ const StoryItem = () => {
   )
 }
 
-const Comment = ({comment}) => {
+const StoryInfo = ({storyID}) => {
+  const [story, setStory] = useState([dummyStory])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const story = await getItem(storyID)
+      setStory(story)
+    }
+    fetchData()
+  }, [storyID])
+
+  return (
+    <>
+      <h1>{story.title}</h1>
+      <p><em>{story.score}</em> points posted by <Link to={`/user/${story.by}`}>{story.by}</Link></p>
+    </>
+  )
+}
+
+const Comment = ({comment, nestLimit=0}) => {
   const [commentData, setComment] = useState([dummyStory])
 
   const fetchComment = async (commentID) => {
-    console.log('comment id', commentID)
     const comment = await getItem(commentID)
     setComment(comment)
   }
@@ -228,6 +288,8 @@ const Comment = ({comment}) => {
   useEffect(() => {
     fetchComment(comment)
   }, [])
+
+  // TODO: add nestLimit
   
   return (
     <>
