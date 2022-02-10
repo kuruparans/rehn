@@ -1,7 +1,7 @@
 {
   "name": "rehn",
   "version": "0.1.0",
-  "homepage": "https://kuruparans.github.io/rehn",
+  "homepage": "https://kuruparan.com/rehn",
   "proxy": "http://localhost:3000/rehn",
   "private": true,
   "dependencies": {

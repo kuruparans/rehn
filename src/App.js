@@ -2,10 +2,11 @@ import './App.css';
 import axios from 'axios'
 import { useEffect, useState } from 'react';
 import {
-  BrowserRouter as Router,
+  BrowserRouter,
   Routes,
   Route,
-  Link
+  Link,
+  useParams
 } from 'react-router-dom'
 
 const url = 'https://hacker-news.firebaseio.com/v0/'
@@ -17,15 +18,18 @@ const dummyStory = {
   "time": 1644003922,
   "title": "Loading",
   "type": "story",
-  "url": "#"
+  "url": "#",
+  "kids": []
 }
 
 const App = () => {
   return (
     <div>
-      <Router>
+      <BrowserRouter basename="/rehn">
         <Header />
         <Routes>
+          <Route path="/story/:id" element={<StoryItem />} />
+          <Route path="/user/:username" element={<Profile />} />
           <Route path="/newest" element={<StoryList type="new" />} />
           <Route path="/best" element={<StoryList type="best" />} />
           <Route path="/top" element={<StoryList type="top" />} />
@@ -33,12 +37,17 @@ const App = () => {
           <Route path="/show" element={<StoryList type="show" />} />
           <Route path="/job" element={<StoryList type="job" />} />
           <Route path="/newcomments" element={<CommentList />} />
-          <Route path="/rehn" element={<StoryList type="top" />} />
+          <Route path="/" element={<StoryList type="top" />} />
         </Routes>
         <Footer />
-      </Router>
+      </BrowserRouter>
     </div>
   )
+}
+
+const getItem = (itemID) => {
+  const request = axios.get(`${url}item/${itemID}.json`)
+  return request.then(response => response.data)
 }
 
 const CommentList = () => {
@@ -52,10 +61,7 @@ const CommentList = () => {
     const request = axios.get(url + 'newstories.json')
     return request.then(response => response.data)
   }
-  const getItem = (itemID) => {
-    const request = axios.get(`${url}item/${itemID}.json`)
-    return request.then(response => response.data)
-  }
+
 
   const fetchData = async () => {
     const maxItemID = await getMaxItemID()
@@ -67,6 +73,9 @@ const CommentList = () => {
       if (!(currentItemID in newestStories)) {
         const currentItem = await getItem(currentItemID)
         if (currentItem.type === 'comment') {
+          const parentStory = await getParentStory(currentItem.id)
+          currentItem.parentStory = parentStory
+          currentItem.timeAgo = timeAgo(currentItem.time)
           comments.push(currentItem)
         }
       }
@@ -81,7 +90,6 @@ const CommentList = () => {
 
   const getParentStory = async (id) => {
     const currentItem = await getItem(id)
-    console.log('cur item;', currentItem)
     if (currentItem.type === 'story')
       return currentItem
     else
@@ -92,10 +100,10 @@ const CommentList = () => {
     <>
       {comments.map(comment => (
         <>
-        <div>{JSON.stringify(comment)}</div><div className="story-list">
+        <div className="story-list">
           <article className="story-list-item" key={comment.id}>
-            <h4><a href={`https://news.ycombinator.com/user?id=${comment.by}`}>{comment.by}</a> {timeAgo(comment.time)} ago | <a href={`https://news.ycombinator.com/item?id=${comment.parent}`}>parent</a> | <a href={`https://news.ycombinator.com/item?id=${getParentStory(comment.id).id}#${comment.id}`}>context</a> | next | on : Y</h4>
-            <p>{comment.text}</p>
+            <h4><Link to={`/user/${comment.by}`}>{comment.by}</Link> {comment.timeAgo} ago | <a href={`https://news.ycombinator.com/item?id=${comment.parent}`}>parent</a> | <a href={`https://news.ycombinator.com/item?id=${comment.parentStory.id}#${comment.id}`}>context</a> | next | on : {comment.parentStory.title}</h4>
+            <p dangerouslySetInnerHTML={setCommentHTML(comment.text)}></p>
           </article>
         </div>
         </>
@@ -104,8 +112,14 @@ const CommentList = () => {
   )
 }
 
+const setCommentHTML = (commentHTML) => {
+  // TODO: sanitize HTML w/ DOMpurify?
+  return {__html: commentHTML}
+}
+
+
 const timeAgo = (unixTimestamp) => {
-  // TODO: fix
+  // TODO: add hours/days ago if larger
   const msMinute = 60*1000
   const timePosted = new Date(unixTimestamp * 1000)
   const timeNow = new Date()
@@ -153,14 +167,79 @@ const StoryList = ({type}) => {
 
   return (
     <div className="story-list">
-    {stories.map(story => (
-      <article className="story-list-item" key={story.id}>
-        <h2><a href={`https://news.ycombinator.com/item?id=${story.id}`}>{story.title}</a></h2> <a href={`${story.url}`}>{getWebsiteName(story.url)}</a>
-        <p><em>{story.score}</em> points posted by <a href={`https://news.ycombinator.com/user?id=${story.by}`}>{story.by}</a> {timeAgo(story.time)} ago | <a href={`https://news.ycombinator.com/item?id=${story.id}`}>{story.descendants} comments</a></p>
-      </article>
-    ))}
-  </div>
+      {stories.map(story => (
+        <article className="story-list-item" key={story.id}>
+          <h2><Link to={`/story/${story.id}`}>{story.title}</Link></h2> <a href={`${story.url}`}>{getWebsiteName(story.url)}</a>
+          <p><em>{story.score}</em> points posted by <Link to={`/user/${story.by}`}>{story.by}</Link> {timeAgo(story.time)} ago | <Link to={`/story/${story.id}`}>{story.descendants} comments</Link></p>
+        </article>
+      ))}
+    </div>
   )
+}
+
+const Profile = () => {
+  return (
+    <>
+    </>
+  )
+}
+
+const StoryItem = () => {
+  const [story, setStory] = useState([dummyStory])
+  const { id } = useParams()
+
+  const fetchData = async (storyID) => {
+    const story = await getItem(storyID)
+    setStory(story)
+    console.log('set story', story)
+  }
+
+  useEffect(() => {
+    fetchData(id)
+  }, [])
+
+  return (
+    <>
+      <h1>{story.title}</h1>
+      <p><em>{story.score}</em> points posted by <Link to={`/user/${story.by}`}>{story.by}</Link></p>
+
+      <div className="comment-list">
+        {story.kids?.map(kid => (
+          <>
+            <article className="comment-list-item">
+              <Comment comment={kid} />
+            </article>
+          </>
+        ))}
+      </div>
+    </>
+  )
+}
+
+const Comment = ({comment}) => {
+  const [commentData, setComment] = useState([dummyStory])
+
+  const fetchComment = async (commentID) => {
+    console.log('comment id', commentID)
+    const comment = await getItem(commentID)
+    setComment(comment)
+  }
+
+  useEffect(() => {
+    fetchComment(comment)
+  }, [])
+  
+  return (
+    <>
+      <article className="comment" key={commentData.id}>
+        <h4><Link to={`/user/${commentData.by}`}>{commentData.by}</Link> {timeAgo(commentData.time)} ago</h4>
+        <p dangerouslySetInnerHTML={setCommentHTML(commentData.text)}></p>
+        {commentData.kids?.map(kid => (
+          <Comment comment={kid} />
+        ))}
+      </article>
+    </>
+  )  
 }
 
 const Header = () => {
@@ -170,12 +249,12 @@ const Header = () => {
         <nav>
           <ul>
             <li><Link to="/">Hacker News</Link></li>
-            <li><Link to="newest">new</Link></li>
+            <li><Link to="/newest">new</Link></li>
             <li><a href="https://news.ycombinator.com/front">past</a></li>
-            <li><a href="/newcomments">comments</a></li>
-            <li><Link to="ask">ask</Link></li>
-            <li><Link to="show">show</Link></li>
-            <li><Link to="jobs">jobs</Link></li>
+            <li><Link to="/newcomments">comments</Link></li>
+            <li><Link to="/ask">ask</Link></li>
+            <li><Link to="/show">show</Link></li>
+            <li><Link to="/jobs">jobs</Link></li>
             {/* <li><a href="https://news.ycombinator.com/submit">submit</a></li> */}
           </ul>
         </nav>

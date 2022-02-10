@@ -6,3 +6,8 @@ article {
 .story-list {
   padding: 1em;
 }
+
+.comment {
+  position: relative;
+  margin-left: 1em;
+}
