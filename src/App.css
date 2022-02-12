@@ -8,6 +8,9 @@ body {
 .container {
   background-color: #f6f6ef;
 }
+.main-content {
+  padding: 0 1em 0 1em;
+}
 nav {
   background-color: #ff6600;
 }
@@ -110,4 +113,8 @@ article {
   width: 1px;
   height: 1px;
   overflow: hidden;
+}
+
+.user-profile .story-info h1{
+  font-size: medium;
 }
