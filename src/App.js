@@ -24,9 +24,10 @@ const dummyStory = {
 
 const App = () => {
   return (
-    <div>
+    <div className="container">
       <BrowserRouter basename="/rehn">
         <Header />
+        <section className="main-content">
         <Routes>
           <Route path="/story/:id" element={<Story />} />
           <Route path="/user/:username" element={<User />} />
@@ -35,10 +36,11 @@ const App = () => {
           <Route path="/top" element={<StoryList type="top" />} />
           <Route path="/ask" element={<StoryList type="ask" />} />
           <Route path="/show" element={<StoryList type="show" />} />
-          <Route path="/job" element={<StoryList type="job" />} />
-          <Route path="/newcomments" element={<CommentList />} />
+          {/* <Route path="/jobs" element={<StoryList type="job" />} /> */}
+          <Route path="/newcomments" element={<NewCommentList />} />
           <Route path="/" element={<StoryList type="top" />} />
         </Routes>
+        </section>
         <Footer />
       </BrowserRouter>
     </div>
@@ -50,7 +52,7 @@ const getItem = (itemID) => {
   return request.then(response => response.data)
 }
 
-const CommentList = () => {
+const NewCommentList = () => {
   const [comments, setComments] = useState([dummyStory])
 
   const getMaxItemID = () => {
@@ -61,7 +63,6 @@ const CommentList = () => {
     const request = axios.get(url + 'newstories.json')
     return request.then(response => response.data)
   }
-
 
   const fetchData = async () => {
     const maxItemID = await getMaxItemID()
@@ -101,9 +102,13 @@ const CommentList = () => {
       {comments.map(comment => (
         <>
         <div className="story-list">
-          <article className="story-list-item" key={comment.id}>
-            <h4><Link to={`/user/${comment.by}`}>{comment.by}</Link> {comment.timeAgo} ago | <a href={`https://news.ycombinator.com/item?id=${comment.parent}`}>parent</a> | <a href={`https://news.ycombinator.com/item?id=${comment.parentStory.id}#${comment.id}`}>context</a> | next | on : {comment.parentStory.title}</h4>
-            <p dangerouslySetInnerHTML={setCommentHTML(comment.text)}></p>
+          <article className="story-list-item" key={comment?.id}>
+          <span className="comment-header"><h4><Link to={`/user/${comment?.by}`}>{comment?.by}</Link> |
+            &nbsp;{comment?.timeAgo} ago | 
+            &nbsp;<Link to={`/story/${comment?.parentStory?.id}#${comment?.parent}`}>parent</Link> | 
+            &nbsp;<Link to={`/story/${comment?.parentStory?.id}#${comment?.id}`}>context</Link> | 
+            on : <Link to={`/story/${comment?.parentStory?.id}`}>{comment?.parentStory?.title}</Link></h4></span>
+            <p dangerouslySetInnerHTML={setCommentHTML(comment?.text)}></p>
           </article>
         </div>
         </>
@@ -112,11 +117,13 @@ const CommentList = () => {
   )
 }
 
+// <span className="comment-header"><h4><Link to={`/user/${commentData.by}`}>{commentData.by}</Link></h4> |
+//         {timeAgo(commentData.time)} ago</span>
+
 const setCommentHTML = (commentHTML) => {
   // TODO: sanitize HTML w/ DOMpurify?
   return {__html: commentHTML}
 }
-
 
 const timeAgo = (unixTimestamp) => {
   // TODO: add hours/days ago if larger
@@ -169,8 +176,17 @@ const StoryList = ({type}) => {
     <div className="story-list">
       {stories.map(story => (
         <article className="story-list-item" key={story.id}>
-          <h2><Link to={`/story/${story.id}`}>{story.title}</Link></h2> <a href={`${story.url}`}>{getWebsiteName(story.url)}</a>
-          <p><em>{story.score}</em> points posted by <Link to={`/user/${story.by}`}>{story.by}</Link> {timeAgo(story.time)} ago | <Link to={`/story/${story.id}`}>{story.descendants} comments</Link></p>
+          <h3><Link to={`/story/${story.id}`}>{story.title}</Link></h3> 
+          <span className="story-link">
+            ({!story.url
+              ? <span>self.hn</span>
+              : <a href={`${story.url}`}>{getWebsiteName(story.url)}</a>
+            })
+            </span>
+          <p><em>{story.score}</em> points |
+          posted by <Link to={`/user/${story.by}`}>{story.by}</Link> |
+          &nbsp;{timeAgo(story.time)} ago |
+          &nbsp;<Link to={`/story/${story.id}`}>{story.descendants} comments</Link></p>
         </article>
       ))}
     </div>
@@ -243,16 +259,19 @@ const Story = () => {
 
   return (
     <>
-      <StoryInfo storyID={story.id} />
+      <div className="story">
+        <StoryInfo storyID={story.id} key={story.id} />
 
-      <div className="comment-list">
-        {story.kids?.map(kid => (
-          <>
-            <article className="comment-list-item">
-              <Comment comment={kid} />
-            </article>
-          </>
-        ))}
+        <div className="comment-list">
+          {story.kids?.map(kid => (
+            <>
+              <article className="comment-list-item">
+                <Comment comment={kid} key={kid} />
+                {/* TODO: display alt message if no comments? */}
+              </article>
+            </>
+          ))}
+        </div>
       </div>
     </>
   )
@@ -271,8 +290,13 @@ const StoryInfo = ({storyID}) => {
 
   return (
     <>
-      <h1>{story.title}</h1>
-      <p><em>{story.score}</em> points posted by <Link to={`/user/${story.by}`}>{story.by}</Link></p>
+      <div className="story-info">
+        <h1><a href={story?.url}>{story?.title}</a></h1>
+        {story?.text !== '' &&
+          <p dangerouslySetInnerHTML={setCommentHTML(story?.text)}></p>
+        }
+        <p className="story-info-footer"><em>{story?.score}</em> points | posted by <Link to={`/user/${story?.by}`}>{story?.by}</Link> | {story?.descendants} comments</p>
+      </div>
     </>
   )
 }
@@ -294,14 +318,19 @@ const Comment = ({comment, nestLimit=0}) => {
   return (
     <>
       <article className="comment" key={commentData.id}>
-        <h4><Link to={`/user/${commentData.by}`}>{commentData.by}</Link> {timeAgo(commentData.time)} ago</h4>
+        <a name={`#${commentData.id}`}></a>
+        <Link to={`#${commentData.id}`} className="comment-border-link">
+            <span className="sr-only">Jump to comment-1</span>
+        </Link>
+        <span className="comment-header"><h4><Link to={`/user/${commentData.by}`}>{commentData.by}</Link></h4> |
+        {timeAgo(commentData.time)} ago</span>
         <p dangerouslySetInnerHTML={setCommentHTML(commentData.text)}></p>
         {commentData.kids?.map(kid => (
-          <Comment comment={kid} />
+          <Comment comment={kid} key={kid} />
         ))}
       </article>
     </>
-  )  
+  )
 }
 
 const Header = () => {
@@ -310,13 +339,14 @@ const Header = () => {
       <header>
         <nav>
           <ul>
-            <li><Link to="/">Hacker News</Link></li>
+            <li><Link to="/best"><img src="https://news.ycombinator.com/y18.gif" className="nav-logo" /></Link></li>
+            <li><Link to="/"><strong>Hacker News</strong></Link></li>
             <li><Link to="/newest">new</Link></li>
-            <li><a href="https://news.ycombinator.com/front">past</a></li>
+            {/* <li><a href="https://news.ycombinator.com/front">past</a></li> */}
             <li><Link to="/newcomments">comments</Link></li>
             <li><Link to="/ask">ask</Link></li>
             <li><Link to="/show">show</Link></li>
-            <li><Link to="/jobs">jobs</Link></li>
+            {/* <li><Link to="/jobs">jobs</Link></li> */}
             {/* <li><a href="https://news.ycombinator.com/submit">submit</a></li> */}
           </ul>
         </nav>
