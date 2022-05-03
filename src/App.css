@@ -78,25 +78,26 @@ article {
   position: relative;
   padding-left: 1em;
 }
+.comment-header {
+  color:rgba(0, 0, 0, 0.4);
+  font-size: small;
+  padding-left: 0.5em;
+  margin-bottom: -0.5em;
+}
 .comment-header h4 {
   display: inline;
   font-weight: normal;
 }
-.comment-header {
-  color:rgba(0, 0, 0, 0.4);
-  font-size: small;
-}
 .comment-header a:link {
   color: lightslategray;
 }
-
 .comment-border-link {
   display: block;
   position: absolute;
-  top: 40px;
+  top: 30px;
   left: 0;
   width: 12px;
-  height: calc(100% - 50px);
+  height: calc(100% - 30px);
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   background-color: rgba(0, 0, 0, 0.1);

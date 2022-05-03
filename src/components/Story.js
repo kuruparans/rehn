@@ -29,7 +29,6 @@ const Story = () => {
               <>
                 <article className="comment-list-item">
                   <Comment comment={kid} key={kid} />
-                  {/* TODO: display alt message if no comments? */}
                 </article>
               </>
             ))}

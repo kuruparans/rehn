@@ -44,17 +44,17 @@ const User = () => {
         <p>Karma Points: {user.karma}</p>
 
         <h3>Submissions ({submissions?.filter(submission => submission.type === 'story').length})</h3>
-        {submissions?.filter(submission => submission.type === 'story').map(submission => (
+        {submissions?.filter(submission => submission.type === 'story' && !submission.dead && !submission.deleted).map(submission => (
           <>
             <StoryInfo storyID={submission.id} />
           </>
         ))}
 
         <h3>Comments ({submissions?.filter(submission => submission.type === 'comment').length})</h3>
-        {submissions?.filter(submission => submission.type === 'comment').map(comment => (
+        {submissions?.filter(submission => submission.type === 'comment' && !submission.dead && !submission.deleted).map(comment => (
           <>
             <Comment comment={comment.id} nestLimit="2" />
-            {/* User profile comment list should have permalinks/context links */}
+            {/* TODO: User profile comment list should have permalinks/context links */}
           </>
         ))}
       </div>

@@ -8,24 +8,28 @@ const Comment = ({comment, nestLimit=0}) => {
   
     const fetchComment = async (commentID) => {
       const comment = await getItem(commentID)
+      console.log(comment)
       setComment(comment)
     }
   
     useEffect(() => {
       fetchComment(comment)
-    }, [])
+    }, [comment])
   
     // TODO: add nestLimit
+
+    if (commentData.dead)
+      return (<></>)
     
     return (
       <>
         <article className="comment" key={commentData.id}>
-          <a name={`#${commentData.id}`}></a>
+          <a name={`${commentData.id}`}></a>
           <Link to={`#${commentData.id}`} className="comment-border-link">
               <span className="sr-only">Jump to comment-1</span>
           </Link>
-          <span className="comment-header"><h4><Link to={`/user/${commentData.by}`}>{commentData.by}</Link></h4> |
-          &nbsp;{timeAgo(commentData.time)} ago</span>
+          <div className="comment-header"><h4><Link to={`/user/${commentData.by}`}>{commentData.by}</Link></h4> |
+          &nbsp;{timeAgo(commentData.time)} ago</div>
           <p dangerouslySetInnerHTML={setCommentHTML(commentData.text)}></p>
           {commentData.kids?.map(kid => (
             <Comment comment={kid} key={kid} />

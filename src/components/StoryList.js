@@ -52,7 +52,7 @@ const StoryList = ({type}) => {
             <h3><Link to={`/story/${story.id}`}>{story.title}</Link></h3> 
             <span className="story-link">
               ({!story.url
-                ? <span>self.hn</span>
+                ? <span><Link to={`/story/${story.id}`}>self.hn</Link></span>
                 : <a href={`${story.url}`}>{getWebsiteName(story.url)}</a>
               })
               </span>
